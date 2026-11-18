@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"><rect width="512" height="512" rx="112" fill="#12B76A"/>
+  <g transform="translate(76 76) scale(0.703125)"><g transform="translate(-30 0)">
+  <defs>
+    <mask id="m6" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
+      <rect width="512" height="512" fill="#fff"/>
+      <!-- kuzov + kabina -->
+      <path d="M-20 -20 H212 V164 Q212 150 226 150 H292 Q302 150 307 159 L364 268 Q368 276 368 285 V410 H-20 Z" fill="#000"/>
+      <!-- g'ildirak halqasi -->
+      <circle cx="250" cy="404" r="64" fill="#000"/>
+      <!-- old oyna -->
+      <path d="M232 206 H286 Q291 206 294 211 L326 270 Q328 276 322 276 H232 Z" fill="#fff"/>
+      <!-- g'ildirak markazi -->
+      <circle cx="250" cy="404" r="33" fill="#fff"/>
+    </mask>
+  </defs>
+  <circle cx="256" cy="256" r="232" fill="#fff" mask="url(#m6)"/></g></g></svg>
