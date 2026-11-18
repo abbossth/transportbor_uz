@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardList, Route } from "lucide-react";
+import { ClipboardList, Route, UserRound } from "lucide-react";
 
 const LINKS = [
   { href: "/", label: "Qatnovlar", short: "Qatnovlar", Icon: Route },
   { href: "/sorovlar", label: "Yuborilgan so‘rovlar", short: "So‘rovlar", Icon: ClipboardList },
+  { href: "/panel", label: "Panel", short: "Panel", Icon: UserRound },
 ] as const;
 
 export function NavLinks() {
@@ -28,7 +29,7 @@ export function NavLinks() {
           >
             <Icon className="size-4 shrink-0" aria-hidden />
             <span className="hidden md:inline">{label}</span>
-            <span className="max-[379px]:sr-only md:hidden">{short}</span>
+            <span className="max-sm:sr-only md:hidden">{short}</span>
           </Link>
         );
       })}
