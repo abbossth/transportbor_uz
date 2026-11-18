@@ -108,7 +108,7 @@ async function Dashboard() {
       </div>
 
       {/* Diagrammalar */}
-      <div className="mt-6 grid gap-4 lg:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Panel title="So‘rovlar holati">
           <DonutChart data={statusData} center={String(items.length)} sub="so‘rov" />
         </Panel>
@@ -122,10 +122,10 @@ async function Dashboard() {
 
       {/* Rolga xos bloklar */}
       {session.role === "shipper" && (
-        <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_2fr]">
+        <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
           <NewRequestForm trips={trips} name={session.name} />
           <Panel title="Mavjud qatnovlar">
-            <ul className="grid gap-2 sm:grid-cols-2">
+            <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {trips.map((t) => (
                 <li key={t.id}>
                   <Link href={`/?trip=${t.id}`} className="press group flex items-center justify-between gap-3 rounded-2xl border border-line bg-bg px-4 py-3 hover:border-brand">

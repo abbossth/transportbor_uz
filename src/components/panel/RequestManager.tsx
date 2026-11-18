@@ -163,7 +163,7 @@ function Card({ item, role, login }: { item: ManagedItem; role: Role; login: str
 
 export function RequestManager({ items, role, login }: { items: ManagedItem[]; role: Role; login: string }) {
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       {items.map((it) => (
         <Card key={it.record.code} item={it} role={role} login={login} />
       ))}
