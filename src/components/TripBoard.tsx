@@ -8,7 +8,8 @@ import { DestinationFilter } from "./DestinationFilter";
 import { TripCard } from "./TripCard";
 import { EmptyState } from "./EmptyState";
 import { RequestDialog } from "./RequestDialog";
-import { HeroStats } from "./HeroStats";
+import { AnimatePresence, LayoutGroup, motion } from "motion/react";
+import { scrollToId } from "@/lib/scroll";
 import { UI_ACTION_EVENT, type UiAction } from "@/lib/ui-events";
 
 type Props = { trips: Trip[]; initialFilter: Destination; initialTripId?: string };
@@ -37,8 +38,7 @@ export function TripBoard({ trips, initialFilter, initialTripId }: Props) {
       const action = (event as CustomEvent<UiAction>).detail;
       if (action.type === "filter") {
         setFilter(action.value);
-        const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        listRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+        scrollToId("qatnovlar");
       } else if (action.type === "select") {
         const trip = trips.find((t) => t.id === action.value);
         if (trip) setSelected(trip);
@@ -59,41 +59,64 @@ export function TripBoard({ trips, initialFilter, initialTripId }: Props) {
 
   return (
     <>
-      <HeroStats trips={trips} now={now} />
-
-      <section ref={listRef} id="qatnovlar" aria-labelledby="trips-title" className="mt-12 scroll-mt-24">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <h2 id="trips-title" className="text-2xl font-extrabold sm:text-3xl">
-              Qatnovlar
-            </h2>
-            <p className="mt-1 text-muted">Yetib borish hududini tanlang va mos qatnovga so‘rov yuboring.</p>
-          </div>
-          <DestinationFilter value={filter} counts={counts} onChange={setFilter} />
+      <section ref={listRef} id="qatnovlar" aria-labelledby="trips-title" className="scroll-mt-16 pt-20 sm:pt-24">
+        <div className="mx-auto max-w-[1200px] px-4 sm:px-6">
+          <p className="text-sm font-bold uppercase tracking-[0.14em] text-brand-ink">Qatnovlar</p>
+          <h2 id="trips-title" className="mt-2 text-3xl font-extrabold tracking-[-0.02em] sm:text-5xl">
+            Mos qatnovni tanlang
+          </h2>
+          <p className="mt-3 max-w-xl text-muted">Yetib borish hududi bo‘yicha saralang va qatnovga so‘rov yuboring.</p>
         </div>
 
-        <p className="sr-only" aria-live="polite">
-          {filter === ALL ? "Barcha" : filter} qatnovlar: {counts[filter]} ta
-        </p>
+        <div className="sticky top-16 z-30 mt-6 border-y border-transparent py-3 backdrop-blur-xl [background:color-mix(in_srgb,var(--bg)_82%,transparent)]">
+          <div className="mx-auto flex max-w-[1200px] flex-col gap-2 px-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <LayoutGroup id="destination-filter">
+              <DestinationFilter value={filter} counts={counts} onChange={setFilter} />
+            </LayoutGroup>
+            <p className="hidden text-sm text-muted sm:block" aria-live="polite">
+              <span className="font-bold tabular-nums text-ink">{counts[filter]}</span> ta qatnov
+              {filter === ALL ? "" : ` · ${filter}ga`}
+            </p>
+            <p className="sr-only sm:hidden" aria-live="polite">
+              {counts[filter]} ta qatnov
+            </p>
+          </div>
+        </div>
 
-        <div className="mt-6 flex flex-col gap-8">
-          {groups.length === 0 ? (
-            <EmptyState destination={filter} onReset={() => setFilter(ALL)} />
-          ) : (
-            groups.map((group) => (
-              <div key={group.date} className="tb-fade-up">
-                <h3 className="mb-3 flex items-center gap-3 text-sm font-bold uppercase tracking-wide text-muted">
-                  {dayLabel(group.date)}
-                  <span className="h-px flex-1 bg-line" aria-hidden />
-                </h3>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {group.trips.map((trip) => (
-                    <TripCard key={trip.id} trip={trip} now={now} onSelect={(t) => setSelected(t)} />
-                  ))}
-                </div>
-              </div>
-            ))
-          )}
+        <div className="mx-auto mt-6 max-w-[1200px] px-4 sm:px-6">
+          <LayoutGroup id="trip-list">
+            <AnimatePresence mode="popLayout" initial={false}>
+              {groups.length === 0 ? (
+                <motion.div key="empty" layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                  <EmptyState destination={filter} onReset={() => setFilter(ALL)} />
+                </motion.div>
+              ) : (
+                groups.map((group) => (
+                  <motion.div
+                    key={group.date}
+                    layout
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="mb-10"
+                  >
+                    <motion.h3 layout="position" className="mb-4 flex items-center gap-3 text-sm font-bold uppercase tracking-wide text-muted">
+                      {dayLabel(group.date)}
+                      <span className="h-px flex-1 bg-line" aria-hidden />
+                    </motion.h3>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                      <AnimatePresence mode="popLayout" initial={false}>
+                        {group.trips.map((trip) => (
+                          <TripCard key={trip.id} trip={trip} now={now} onSelect={(t) => setSelected(t)} />
+                        ))}
+                      </AnimatePresence>
+                    </div>
+                  </motion.div>
+                ))
+              )}
+            </AnimatePresence>
+          </LayoutGroup>
         </div>
       </section>
 
