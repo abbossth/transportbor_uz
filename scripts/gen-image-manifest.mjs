@@ -3,7 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const NAMES = ["hero", "van-city", "boxes", "handover", "road-a", "road-b", "road-c", "night-road"];
+const NAMES = ["hero", "van-city", "boxes", "handover", "road-a", "road-b", "road-c", "night-road", "t-car", "t-mini", "t-pickup", "t-semi"];
 const EXTS = [".jpg", ".jpeg", ".webp", ".avif", ".png"];
 const dir = path.join(process.cwd(), "public", "images");
 const outFile = path.join(process.cwd(), "src", "lib", "image-manifest.json");

@@ -31,6 +31,8 @@ async function AuthCard({ params, searchParams }: PageProps<"/kirish/[rol]">) {
   const register = sp.tab === "royxat";
   const error = typeof sp.xato === "string" ? ERRORS[sp.xato] : undefined;
   const Icon = ICONS[role];
+  const next = typeof sp.next === "string" && sp.next.startsWith("/") && !sp.next.startsWith("//") ? sp.next : "";
+  const q = next ? `&next=${encodeURIComponent(next)}` : "";
 
   return (
     <div className="tb-word w-full max-w-md rounded-[28px] border border-line bg-card p-6 shadow-pop sm:p-8">
@@ -44,6 +46,11 @@ async function AuthCard({ params, searchParams }: PageProps<"/kirish/[rol]">) {
         </div>
       </div>
 
+      {next && !error && (
+        <p className="mt-5 rounded-2xl bg-brand-soft px-4 py-3 text-sm font-semibold text-brand-ink">
+          Davom etish uchun hisobingizga kiring — so‘ng so‘ragan sahifangiz ochiladi.
+        </p>
+      )}
       {error && (
         <p role="alert" className="tb-shake mt-5 rounded-2xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm font-semibold text-danger-ink">
           {error}
@@ -53,6 +60,7 @@ async function AuthCard({ params, searchParams }: PageProps<"/kirish/[rol]">) {
       {register ? (
         <form method="post" action="/api/auth/register" className="mt-6 flex flex-col gap-4">
           <input type="hidden" name="role" value={role} />
+          <input type="hidden" name="next" value={next} />
           <label className="flex flex-col gap-1.5 text-sm font-semibold">
             Ism va familiya
             <input name="name" required maxLength={60} autoComplete="name" placeholder="Masalan: Ali Valiyev" className={input} />
@@ -68,7 +76,7 @@ async function AuthCard({ params, searchParams }: PageProps<"/kirish/[rol]">) {
           <button className="press mt-2 min-h-12 rounded-full bg-brand font-bold text-on-brand hover:bg-brand-hover">Ro‘yxatdan o‘tish</button>
           <p className="text-center text-sm text-muted">
             Hisobingiz bormi?{" "}
-            <Link href={`/kirish/${rol}`} className="font-bold text-brand-ink hover:underline">
+            <Link href={`/kirish/${rol}${q ? `?${q.slice(1)}` : ""}`} className="font-bold text-brand-ink hover:underline">
               Kirish
             </Link>
           </p>
@@ -76,6 +84,7 @@ async function AuthCard({ params, searchParams }: PageProps<"/kirish/[rol]">) {
       ) : (
         <form method="post" action="/api/auth/login" className="mt-6 flex flex-col gap-4">
           <input type="hidden" name="rol" value={rol} />
+          <input type="hidden" name="next" value={next} />
           <label className="flex flex-col gap-1.5 text-sm font-semibold">
             Login
             <input name="login" required autoComplete="username" placeholder="Loginingiz" className={input} />
@@ -87,7 +96,7 @@ async function AuthCard({ params, searchParams }: PageProps<"/kirish/[rol]">) {
           <button className="press mt-2 min-h-12 rounded-full bg-brand font-bold text-on-brand hover:bg-brand-hover">Kirish</button>
           <p className="text-center text-sm text-muted">
             Hisobingiz yo‘qmi?{" "}
-            <Link href={`/kirish/${rol}?tab=royxat`} className="font-bold text-brand-ink hover:underline">
+            <Link href={`/kirish/${rol}?tab=royxat${q}`} className="font-bold text-brand-ink hover:underline">
               Ro‘yxatdan o‘tish
             </Link>
           </p>

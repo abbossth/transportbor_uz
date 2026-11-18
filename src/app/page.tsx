@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { Hero } from "@/components/home/Hero";
 import { TrustRow } from "@/components/home/TrustRow";
 import { Regions } from "@/components/home/Regions";
+import { TransportTypes } from "@/components/home/TransportTypes";
 import { HowItWorks } from "@/components/home/HowItWorks";
 import { AssistantPromo } from "@/components/home/AssistantPromo";
 import { Photo } from "@/components/Photo";
@@ -45,6 +46,7 @@ export default function Home({ searchParams }: PageProps<"/">) {
         <TripsSection searchParams={searchParams} />
       </Suspense>
       <Regions />
+      <TransportTypes />
       <HowItWorks photo={<Photo name="van-city" sizes="(min-width: 1024px) 50vw, 100vw" tone="teal" />} />
       <AssistantPromo />
     </>

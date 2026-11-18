@@ -1,6 +1,7 @@
 import { getTrips, listRequests } from "@/lib/store";
 import { askGemini, hasGemini } from "@/lib/gemini";
-import { parseCarrierIntent, parseIntent } from "@/lib/intent";
+import { parseCarrierIntent, parseIntent, parseNavigation } from "@/lib/intent";
+import { getSession, ROLE_LABEL } from "@/lib/auth";
 import type { ApiResponse } from "@/lib/types";
 import type { AssistantMode, AssistantReply, CargoSummary, ChatTurn } from "@/lib/assistant-types";
 import { NO_ACTION } from "@/lib/assistant-types";
@@ -60,6 +61,23 @@ export async function POST(request: Request) {
     : [];
 
   const mode: AssistantMode = body.mode === "carrier" ? "carrier" : "shipper";
+  const session = await getSession().catch(() => null);
+  const userText = session ? `tizimga kirgan: ${session.name} (${ROLE_LABEL[session.role]})` : "tizimga kirmagan";
+  /** Panel kirishni talab qiladi: kirmagan bo‘lsa — kirish sahifasiga, kirgach panelga qaytadi. */
+  const gate = (r: AssistantReply): AssistantReply => {
+    if (r.action.type !== "navigate" || session) return r;
+    if (r.action.value.startsWith("/kirish/") && !r.action.value.includes("next=") && /panel|kabinet|hisobim/i.test(text ?? "")) {
+      const sep = r.action.value.includes("?") ? "&" : "?";
+      return { ...r, action: { type: "navigate", value: `${r.action.value}${sep}next=%2Fpanel` } };
+    }
+    if (!r.action.value.startsWith("/panel")) return r;
+    const slug = mode === "carrier" ? "transport-egasi" : /admin/i.test(text) ? "admin" : /transport/i.test(text) ? "transport-egasi" : "yuk-egasi";
+    return {
+      ...r,
+      reply: "Panelga o‘tish uchun avval hisobingizga kiring. Kirish sahifasini ochdim — kirganingizdan so‘ng panelingiz o‘zi ochiladi. Demo: login va parol — yuk_egasi.",
+      action: { type: "navigate", value: `/kirish/${slug}?next=%2Fpanel` },
+    };
+  };
   const { trips } = await getTrips();
   const cargo: CargoSummary[] =
     mode === "carrier"
@@ -89,8 +107,8 @@ export async function POST(request: Request) {
 
   if (hasGemini()) {
     try {
-      const result = await askGemini({ mode, cargo, message: text, audio, history, trips, now });
-      return json<AssistantReply>({ ok: true, data: { ...result, transcript: transcript ?? result.transcript, source: "gemini" } });
+      const result = await askGemini({ mode, cargo, user: userText, message: text, audio, history, trips, now });
+      return json<AssistantReply>({ ok: true, data: gate({ ...result, transcript: transcript ?? result.transcript, source: "gemini" }) });
     } catch (error) {
       console.warn("[assistant] Gemini xatosi, lokal tahlilchiga o‘tildi:", error instanceof Error ? error.message : error);
     }
@@ -102,6 +120,6 @@ export async function POST(request: Request) {
       data: { reply: "Ovozli xabarni hozir tushunib bo‘lmadi. Iltimos, savolingizni yozib yuboring.", action: NO_ACTION, source: "local" },
     });
   }
-  const local = mode === "carrier" ? parseCarrierIntent(text, trips, cargo) : parseIntent(text, trips, now);
-  return json<AssistantReply>({ ok: true, data: { ...local, transcript, source: "local" } });
+  const local = parseNavigation(text) ?? (mode === "carrier" ? parseCarrierIntent(text, trips, cargo) : parseIntent(text, trips, now));
+  return json<AssistantReply>({ ok: true, data: gate({ ...local, transcript, source: "local" }) });
 }

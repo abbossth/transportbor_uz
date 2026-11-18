@@ -21,7 +21,8 @@ export async function POST(request: Request) {
   } catch {
     return fail("band");
   }
-  const url = new URL("/panel", request.url);
+  const nextRaw = String(form.get("next") ?? "");
+  const url = new URL(/^\/(?!\/)[\w\-/?=&%.]*$/.test(nextRaw) ? nextRaw : "/panel", request.url);
   const headers = new Headers({ Location: url.toString() });
   headers.append("Set-Cookie", `${SESSION_COOKIE}=${makeSessionCookie(user)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800${url.protocol === "https:" ? "; Secure" : ""}`);
   return new Response(null, { status: 303, headers });

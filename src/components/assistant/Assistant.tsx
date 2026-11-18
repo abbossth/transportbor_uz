@@ -26,7 +26,7 @@ const MODES: Record<AssistantMode, { tab: string; Icon: typeof Truck; hello: str
     hello: "Salom! Men Yo‘ldoshman 👋",
     sub: "Yukingiz qayerga borishini ayting — mos qatnovni topib, so‘rov shaklini ochib beraman.",
     placeholder: "Yukingizni qayerga yubormoqchisiz?",
-    chips: ["B tumaniga qatnovlar", "Eng yaqin qatnov qachon?", "Y02 ni tanla", "Qanday ishlaydi?"],
+    chips: ["B tumaniga qatnovlar", "Eng yaqin qatnov qachon?", "Y02 ni tanla", "Panelimni och"],
   },
   carrier: {
     tab: "Yuk topish",
@@ -34,7 +34,7 @@ const MODES: Record<AssistantMode, { tab: string; Icon: typeof Truck; hello: str
     hello: "Salom, transport egasi! 👋",
     sub: "Qaysi yo‘nalishga ketyapsiz? Qatnovlaringizga kelgan yuk so‘rovlarini topib beraman.",
     placeholder: "Qaysi yo‘nalishda yuk qidiryapsiz?",
-    chips: ["B tumaniga yuk bormi?", "Y02 qatnoviga yuk bormi?", "Nechta yuk bor?", "C tumaniga yuk"],
+    chips: ["B tumaniga yuk bormi?", "Y02 qatnoviga yuk bormi?", "Nechta yuk bor?", "Transport egasi paneliga kir"],
   },
 };
 
@@ -178,6 +178,10 @@ export default function Assistant() {
       setConversation(false);
       setOpen(false);
       setBubble(reply);
+      if (action.type === "navigate") {
+        router.push(action.value);
+        return;
+      }
       if (pathname !== "/") {
         const q = action.type === "filter" ? (action.value === "Barchasi" ? "" : `?to=${encodeURIComponent(action.value)}`) : `?trip=${action.value}`;
         router.push(`/${q}`);

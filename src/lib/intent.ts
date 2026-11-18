@@ -153,3 +153,17 @@ export function parseCarrierIntent(text: string, trips: readonly Trip[], cargo: 
   }
   return { reply: "Masalan: “B tumaniga yuk bormi?”, “Y02 qatnoviga yuk bormi?” yoki “Nechta yuk bor?” deb so‘rang.", action: NO_ACTION };
 }
+
+/** Sahifaga o‘tish buyruqlari (ikkala rejim uchun). */
+export function parseNavigation(text: string): LocalIntent | null {
+  const q = normalizeQuery(text);
+  const role = /transport egasi|haydovchi|tashuvchi/.test(q) ? "transport-egasi" : /admin/.test(q) ? "admin" : "yuk-egasi";
+  if (/ro'yxatdan|royxatdan|registr/.test(q)) {
+    return { reply: "Ro‘yxatdan o‘tish sahifasini ochdim.", action: { type: "navigate", value: `/kirish/${role === "admin" ? "yuk-egasi" : role}?tab=royxat` } };
+  }
+  if (/panel|kabinet|hisobim|profil/.test(q)) return { reply: "Shaxsiy panelni ochyapman.", action: { type: "navigate", value: "/panel" } };
+  if (/kirish|login|hisobga kir/.test(q)) return { reply: "Kirish sahifasini ochdim.", action: { type: "navigate", value: `/kirish/${role}` } };
+  if (/yuborilgan|so'rovlar sahifa|sorovlar/.test(q)) return { reply: "Yuborilgan so‘rovlar sahifasini ochdim.", action: { type: "navigate", value: "/sorovlar" } };
+  if (/bosh sahifa|asosiy sahifa|qatnovlar sahifa/.test(q)) return { reply: "Bosh sahifaga o‘tdim.", action: { type: "navigate", value: "/" } };
+  return null;
+}

@@ -1,6 +1,6 @@
 import { DESTINATIONS, routeLabel, whenLabel, type Trip } from "./trips";
 import { dayLabel } from "./dates";
-import { sanitizeAction, type AssistantAction, type AssistantMode, type CargoSummary, type ChatTurn } from "./assistant-types";
+import { NAV_PAGES, sanitizeAction, type AssistantAction, type AssistantMode, type CargoSummary, type ChatTurn } from "./assistant-types";
 
 export const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash";
 export const hasGemini = () => Boolean(process.env.GEMINI_API_KEY);
@@ -13,7 +13,7 @@ const RESPONSE_SCHEMA = {
     action: {
       type: "OBJECT",
       properties: {
-        type: { type: "STRING", enum: ["filter", "select", "none"] },
+        type: { type: "STRING", enum: ["filter", "select", "navigate", "none"] },
         value: { type: "STRING" },
       },
       required: ["type", "value"],
@@ -46,7 +46,7 @@ QOIDALAR:
 - Faqat quyidagi 5 ta qatnov haqida gapir. Yangi qatnov, haydovchi, mashina, narx yoki vaqt to‘qib chiqarma.
 - Narx, to‘lov, GPS/xarita, yuk sig‘imi, haydovchi bilan bog‘lanish va haqiqiy band qilish haqida so‘rashsa: "bu sinov loyihasida yo‘q" de.
 - So‘rovni o‘zing yubormaysan — faqat filtrlaysan yoki so‘rov shaklini ochib berasan, foydalanuvchi ism va yuk tavsifini o‘zi kiritadi.
-- Mavzudan tashqari savollarga muloyimlik bilan qatnovlar mavzusiga qaytar.
+- Mavzudan tashqari savollarga muloyimlik bilan qatnovlar mavzusiga qaytar. Sayt sahifalari (panel, kirish, ro‘yxatdan o‘tish, yuborilgan so‘rovlar) haqidagi so‘rovlar mavzuga kiradi.
 
 AMALLAR (action):
 - "filter": foydalanuvchi yetib borish hududi bo‘yicha qatnovlarni so‘rasa. value aniq shulardan biri: ${DESTINATIONS.map((d) => `"${d}"`).join(", ")}. Filtr "Qayerga" ustuni bo‘yicha ishlaydi.
@@ -61,7 +61,17 @@ QATNOVLAR:
 ${list}`;
 }
 
+function navInstruction(user: string): string {
+  return `
+SAHIFALARGA O‘TISH (action "navigate", value — aniq shu yo‘llardan biri):
+${Object.entries(NAV_PAGES).map(([p, d]) => `- "${p}": ${d}`).join("\n")}
+Foydalanuvchi holati: ${user}.
+- Foydalanuvchi panel, kirish, ro‘yxatdan o‘tish yoki boshqa sahifani so‘rasa — "navigate" ber va javobda "…ni ochdim" de.
+- Panel so‘ralsa va foydalanuvchi tizimga kirmagan bo‘lsa — avval hisobga kirishni so‘ra (server kirish sahifasiga yo‘naltiradi).`;
+}
+
 type GeminiInput = {
+  user?: string;
   mode?: AssistantMode;
   cargo?: readonly CargoSummary[];
   message?: string;
@@ -73,7 +83,7 @@ type GeminiInput = {
 
 export type GeminiResult = { reply: string; action: AssistantAction; transcript?: string };
 
-export async function askGemini({ mode = "shipper", cargo = [], message, audio, history, trips, now }: GeminiInput): Promise<GeminiResult> {
+export async function askGemini({ mode = "shipper", cargo = [], user = "tizimga kirmagan", message, audio, history, trips, now }: GeminiInput): Promise<GeminiResult> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY yo‘q");
 
@@ -95,7 +105,7 @@ export async function askGemini({ mode = "shipper", cargo = [], message, audio, 
     method: "POST",
     headers: { "Content-Type": "application/json", "x-goog-api-key": key },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: mode === "carrier" ? carrierInstruction(trips, cargo, now) : systemInstruction(trips, now) }] },
+      systemInstruction: { parts: [{ text: (mode === "carrier" ? carrierInstruction(trips, cargo, now) : systemInstruction(trips, now)) + navInstruction(user) }] },
       contents,
       generationConfig: {
         temperature: 0.3,
