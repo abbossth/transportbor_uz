@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { NavLinks } from "./NavLinks";
 import { ThemeToggle } from "./ThemeToggle";
+import { HeaderMicButton } from "./HeaderMicButton";
 
 export function SiteHeader() {
   return (
@@ -16,6 +17,7 @@ export function SiteHeader() {
         </Link>
         <div className="flex min-w-0 items-center gap-1 sm:gap-2">
           <NavLinks />
+          <HeaderMicButton />
           <ThemeToggle />
         </div>
       </div>

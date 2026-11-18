@@ -4,6 +4,7 @@ import { parseIntent } from "@/lib/intent";
 import type { ApiResponse } from "@/lib/types";
 import type { AssistantReply, ChatTurn } from "@/lib/assistant-types";
 import { NO_ACTION } from "@/lib/assistant-types";
+import { getSttProvider, getTtsProvider } from "@/lib/voice/server";
 
 const AUDIO_TYPES = ["audio/wav", "audio/webm", "audio/ogg", "audio/mp4", "audio/mpeg"];
 const MAX_AUDIO_BASE64 = 3_000_000; // ~2.2 MB
@@ -13,8 +14,13 @@ function json<T>(body: ApiResponse<T>, status = 200) {
   return Response.json(body, { status });
 }
 
+export type AssistantCapabilities = { gemini: boolean; stt: boolean; tts: boolean };
+
 export async function GET() {
-  return json({ ok: true, data: { gemini: hasGemini() } });
+  return json<AssistantCapabilities>({
+    ok: true,
+    data: { gemini: hasGemini(), stt: Boolean(getSttProvider()), tts: Boolean(getTtsProvider()) },
+  });
 }
 
 export async function POST(request: Request) {
@@ -56,20 +62,40 @@ export async function POST(request: Request) {
   const { trips } = await getTrips();
   const now = new Date();
 
+  // 1) O‘zbekcha STT provayderi bo‘lsa — avval matnga o‘giramiz
+  let transcript: string | undefined;
+  let text = message;
+  const stt = audio ? getSttProvider() : null;
+  if (audio && stt) {
+    try {
+      transcript = await stt.transcribe(audio, "uz");
+      if (!transcript) {
+        return json<AssistantReply>({
+          ok: true,
+          data: { reply: "Ovoz eshitilmadi. Mikrofon tugmasini bosib, qaytadan gapiring.", action: NO_ACTION, source: "local" },
+        });
+      }
+      text = transcript;
+      audio = undefined;
+    } catch (error) {
+      console.warn(`[assistant] ${stt.name} STT xatosi:`, error instanceof Error ? error.message : error);
+    }
+  }
+
   if (hasGemini()) {
     try {
-      const result = await askGemini({ message, audio, history, trips, now });
-      return json<AssistantReply>({ ok: true, data: { ...result, source: "gemini" } });
+      const result = await askGemini({ message: text, audio, history, trips, now });
+      return json<AssistantReply>({ ok: true, data: { ...result, transcript: transcript ?? result.transcript, source: "gemini" } });
     } catch (error) {
       console.warn("[assistant] Gemini xatosi, lokal tahlilchiga o‘tildi:", error instanceof Error ? error.message : error);
     }
   }
 
-  if (!message) {
+  if (!text) {
     return json<AssistantReply>({
       ok: true,
       data: { reply: "Ovozli xabarni hozir tushunib bo‘lmadi. Iltimos, savolingizni yozib yuboring.", action: NO_ACTION, source: "local" },
     });
   }
-  return json<AssistantReply>({ ok: true, data: { ...parseIntent(message, trips, now), source: "local" } });
+  return json<AssistantReply>({ ok: true, data: { ...parseIntent(text, trips, now), transcript, source: "local" } });
 }

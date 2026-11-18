@@ -2,12 +2,19 @@
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Bot, Loader2, MessageCircle, SendHorizontal, Sparkles, X } from "lucide-react";
+import { Bot, Loader2, MessageCircle, SendHorizontal, Sparkles, Volume2, VolumeX, X } from "lucide-react";
 import { TRIPS } from "@/lib/trips";
 import { parseIntent } from "@/lib/intent";
 import type { ApiResponse } from "@/lib/types";
 import type { AssistantAction, AssistantReply, ChatTurn } from "@/lib/assistant-types";
-import { dispatchUiAction } from "@/lib/ui-events";
+import { ASSISTANT_VOICE_EVENT, dispatchUiAction } from "@/lib/ui-events";
+import { startRecording, toWav16kBase64, VoiceError, voiceErrorMessage } from "@/lib/voice/recorder";
+import { browserSttSupported, listenOnce } from "@/lib/voice/browser-stt";
+import { speak, stopSpeaking } from "@/lib/voice/speak";
+import { VoiceButton, type VoiceState } from "./VoiceButton";
+
+type Capabilities = { gemini: boolean; stt: boolean; tts: boolean };
+const MUTE_KEY = "tb-voice-muted";
 
 type Message = { id: number; role: "user" | "assistant"; text: string; voice?: boolean };
 
@@ -22,7 +29,17 @@ export function AssistantPanel() {
   const [messages, setMessages] = useState<Message[]>([{ id: 0, role: "assistant", text: GREETING }]);
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
-  const [mode, setMode] = useState<"gemini" | "local" | null>(null);
+  const [caps, setCaps] = useState<Capabilities | null>(null);
+  const [voice, setVoice] = useState<VoiceState>("idle");
+  // Faqat ochiq panelda ko‘rinadi (SSR'da chizilmaydi) — hydration xavfsiz
+  const [muted, setMuted] = useState(() => {
+    try {
+      return typeof window !== "undefined" && localStorage.getItem(MUTE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const stopRef = useRef<(() => void) | null>(null);
   const nextId = useRef(1);
   const inputRef = useRef<HTMLInputElement>(null);
   const fabRef = useRef<HTMLButtonElement>(null);
@@ -30,14 +47,25 @@ export function AssistantPanel() {
   const pathname = usePathname();
   const router = useRouter();
 
-  // Gemini mavjudligini bir marta aniqlaymiz
+  // Gemini / STT / TTS mavjudligini bir marta aniqlaymiz
   useEffect(() => {
-    if (!open || mode) return;
     fetch("/api/assistant")
-      .then((r) => r.json() as Promise<ApiResponse<{ gemini: boolean }>>)
-      .then((b) => setMode(b.ok && b.data.gemini ? "gemini" : "local"))
-      .catch(() => setMode("local"));
-  }, [open, mode]);
+      .then((r) => r.json() as Promise<ApiResponse<Capabilities>>)
+      .then((b) => setCaps(b.ok ? b.data : { gemini: false, stt: false, tts: false }))
+      .catch(() => setCaps({ gemini: false, stt: false, tts: false }));
+  }, []);
+  const mode = caps ? (caps.gemini ? "gemini" : "local") : null;
+
+  function toggleMute() {
+    const next = !muted;
+    setMuted(next);
+    if (next) stopSpeaking();
+    try {
+      localStorage.setItem(MUTE_KEY, next ? "1" : "0");
+    } catch {
+      /* e’tiborsiz */
+    }
+  }
 
   useEffect(() => {
     if (open) inputRef.current?.focus();
@@ -48,6 +76,8 @@ export function AssistantPanel() {
   }, [messages, pending]);
 
   const close = useCallback(() => {
+    stopRef.current?.();
+    stopSpeaking();
     setOpen(false);
     fabRef.current?.focus();
   }, []);
@@ -107,10 +137,61 @@ export function AssistantPanel() {
       push("assistant", result.reply);
       setPending(false);
       runAction(result.action);
+      if (opts.voice && !muted) void speak(result.reply, Boolean(caps?.tts));
       return result;
     },
-    [messages, pending, push, runAction],
+    [messages, pending, push, runAction, muted, caps],
   );
+
+  /** Mikrofon: 1-bosish — yozish, 2-bosish — to‘xtatish va yuborish. */
+  const toggleVoice = useCallback(async () => {
+    if (voice === "recording") {
+      stopRef.current?.();
+      return;
+    }
+    if (voice !== "idle" || pending) return;
+    stopSpeaking();
+    const serverAudio = Boolean(caps?.stt || caps?.gemini) && typeof MediaRecorder !== "undefined";
+    try {
+      if (serverAudio) {
+        const rec = await startRecording(12_000);
+        stopRef.current = rec.stop;
+        setVoice("recording");
+        const blob = await rec.result;
+        setVoice("processing");
+        const data = await toWav16kBase64(blob);
+        await send("", { audio: { data, mimeType: "audio/wav" }, voice: true });
+      } else if (browserSttSupported()) {
+        const listening = listenOnce("uz-UZ");
+        stopRef.current = listening.stop;
+        setVoice("recording");
+        const text = await listening.result;
+        setVoice("processing");
+        await send(text, { voice: true });
+      } else {
+        throw new VoiceError("unsupported");
+      }
+    } catch (error) {
+      push("assistant", voiceErrorMessage(error instanceof VoiceError ? error.code : "failed"));
+    } finally {
+      stopRef.current = null;
+      setVoice("idle");
+    }
+  }, [voice, pending, caps, send, push]);
+
+  // Header'dagi mikrofon tugmasi
+  const toggleVoiceRef = useRef(toggleVoice);
+  useEffect(() => {
+    toggleVoiceRef.current = toggleVoice;
+  }, [toggleVoice]);
+  useEffect(() => {
+    const onVoice = () => {
+      setOpen(true);
+      void toggleVoiceRef.current();
+    };
+    window.addEventListener(ASSISTANT_VOICE_EVENT, onVoice);
+    return () => window.removeEventListener(ASSISTANT_VOICE_EVENT, onVoice);
+  }, []);
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -163,6 +244,16 @@ export function AssistantPanel() {
             </div>
             <button
               type="button"
+              onClick={toggleMute}
+              aria-pressed={muted}
+              aria-label={muted ? "Ovozli javobni yoqish" : "Ovozli javobni o‘chirish"}
+              title={muted ? "Ovozli javob o‘chiq" : "Ovozli javob yoqiq"}
+              className="grid size-10 place-items-center rounded-full border border-line text-muted hover:bg-bg hover:text-ink"
+            >
+              {muted ? <VolumeX className="size-5" aria-hidden /> : <Volume2 className="size-5" aria-hidden />}
+            </button>
+            <button
+              type="button"
               onClick={close}
               aria-label="Yordamchini yopish"
               className="grid size-10 place-items-center rounded-full border border-line text-muted hover:bg-bg hover:text-ink"
@@ -194,6 +285,13 @@ export function AssistantPanel() {
             )}
           </div>
 
+          {voice !== "idle" && (
+            <p role="status" className="mx-4 mb-3 flex items-center gap-2 rounded-xl bg-danger/10 px-3 py-2 text-sm font-semibold text-danger-ink">
+              <span className={`size-2.5 rounded-full bg-danger ${voice === "recording" ? "tb-recording" : ""}`} aria-hidden />
+              {voice === "recording" ? "Tinglayapman… (to‘xtatish uchun ■ ni bosing)" : "Ovoz tahlil qilinmoqda…"}
+            </p>
+          )}
+
           <div className="flex flex-wrap gap-2 px-4 pb-3" aria-label="Tezkor takliflar">
             {SUGGESTIONS.map((s) => (
               <button
@@ -223,6 +321,7 @@ export function AssistantPanel() {
               onChange={(e) => setInput(e.target.value)}
               className="min-w-0 flex-1 rounded-full border border-line bg-bg px-4 py-2.5 text-base text-ink placeholder:text-muted/80 focus:bg-card focus:outline-none focus-visible:outline-3 focus-visible:outline-brand sm:text-sm"
             />
+            <VoiceButton state={voice} onClick={() => void toggleVoice()} disabled={pending && voice === "idle"} />
             <button
               type="submit"
               disabled={pending || !input.trim()}
