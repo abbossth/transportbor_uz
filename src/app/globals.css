@@ -329,3 +329,15 @@ dialog.tb-dialog[open] > .tb-dialog-panel { animation: tb-pop 0.42s cubic-bezier
 }
 .rs-flow { animation: rs-flow 1.6s linear infinite; }
 .rs-hub-ring { animation: rs-hub 2.4s ease-out infinite; }
+
+/* ---------- Yo‘ldosh oynasi ---------- */
+@keyframes yb-twinkle { 0%, 100% { opacity: 0.15; } 50% { opacity: 0.95; } }
+@keyframes yb-orb-pulse { 0%, 100% { transform: scale(0.95); } 50% { transform: scale(1.05); } }
+@keyframes yb-orb-ring { from { transform: scale(0.9); opacity: 0.8; } to { transform: scale(1.25); opacity: 0; } }
+.yb-star { animation: yb-twinkle 4s ease-in-out infinite; }
+.yb-orb { transform: scale(calc(0.9 + var(--lvl, 0) * 0.45)); transition: transform 90ms linear; }
+[data-state="idle"] > .yb-orb, [data-state="thinking"] > .yb-orb { animation: yb-orb-pulse 2.6s ease-in-out infinite; }
+.yb-orb-ring { animation: yb-orb-ring 2.4s ease-out infinite; }
+[data-state="listening"] > .yb-orb-ring { animation-duration: 1.2s; }
+@keyframes tb-bar { from { transform: scaleY(0); } to { transform: none; } }
+.tb-bar { transform-origin: bottom; animation: tb-bar 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }

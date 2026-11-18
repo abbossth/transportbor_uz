@@ -9,7 +9,8 @@ export async function POST(request: Request) {
   const password = String(form.get("password") ?? "");
   const role = String(form.get("role") ?? "") as Role;
 
-  const fail = (code: string) => Response.redirect(new URL(`/kirish?tab=royxat&xato=${code}`, request.url), 303);
+  const slug = role === "carrier" ? "transport-egasi" : role === "admin" ? "admin" : "yuk-egasi";
+  const fail = (code: string) => Response.redirect(new URL(`/kirish/${slug}?tab=royxat&xato=${code}`, request.url), 303);
   if (!name || !/^[a-z0-9_.-]{3,32}$/.test(login) || password.length < 6 || !ROLES.includes(role)) return fail("maydon");
   if (role === "admin" && (await adminExists())) return fail("admin");
   if (await findUser(login)) return fail("band");

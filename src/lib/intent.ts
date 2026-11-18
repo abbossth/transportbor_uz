@@ -4,7 +4,7 @@
  */
 import { ALL, findTrip, nextTrip, routeLabel, whenLabel, type Destination, type Trip } from "./trips.ts";
 import { untilLabel } from "./dates.ts";
-import { NO_ACTION, type AssistantAction } from "./assistant-types.ts";
+import { NO_ACTION, type AssistantAction, type CargoSummary } from "./assistant-types.ts";
 
 export type LocalIntent = { reply: string; action: AssistantAction };
 
@@ -120,4 +120,36 @@ export function parseIntent(text: string, trips: readonly Trip[], now: Date = ne
     reply: "Buni tushunmadim. Masalan: “B tumaniga qatnovlar”, “Eng yaqin qatnov qachon?” yoki “Y02 ni tanla” deb yozing.",
     action: NO_ACTION,
   };
+}
+
+/** Transport egasi rejimi: yo‘nalishdagi yuk so‘rovlarini topadi. */
+export function parseCarrierIntent(text: string, trips: readonly Trip[], cargo: readonly CargoSummary[]): LocalIntent {
+  const q = normalizeQuery(text);
+  const fmt = (list: readonly CargoSummary[]) => list.slice(0, 6).map((c) => `${c.tripId} (${c.route}): ${c.cargo}`).join("; ");
+  if (!q) return { reply: "Qaysi yo‘nalishdagi yuklarni qidiryapsiz?", action: NO_ACTION };
+  if (/^(salom|assalom|hello|hi)/.test(q)) {
+    return { reply: "Assalomu alaykum! Transport egalari uchun yuk topaman. Masalan: “B tumaniga yuk bormi?”", action: NO_ACTION };
+  }
+  if (/narx|pul|to'lov/.test(q)) return { reply: "Narx hisoblash bu sinov loyihasida yo‘q.", action: NO_ACTION };
+
+  const id = /(?:^|[^a-z])y\s*-?\s*0?([1-5])(?![0-9])/.exec(q);
+  if (id) {
+    const tid = `Y0${id[1]}`;
+    const list = cargo.filter((c) => c.tripId === tid);
+    return { reply: list.length ? `${tid} qatnoviga ${list.length} ta yuk so‘rovi bor: ${fmt(list)}.` : `${tid} qatnoviga hozircha yuk so‘rovi yo‘q.`, action: NO_ACTION };
+  }
+  const m = /(?:^|\s)(a|b|bi|be|c|s|si|se|ts)\s*-?\s*tuman/.exec(q);
+  if (m) {
+    const dest = `${m[1].startsWith("a") ? "A" : m[1].startsWith("b") ? "B" : "C"} tumani`;
+    const tripIds = trips.filter((t) => t.to === dest).map((t) => t.id);
+    const list = cargo.filter((c) => tripIds.includes(c.tripId));
+    return {
+      reply: list.length ? `${dest}ga ${list.length} ta yuk bor: ${fmt(list)}.` : `${dest}ga hozircha yuk so‘rovi yo‘q.`,
+      action: NO_ACTION,
+    };
+  }
+  if (/hammasi|barcha|qancha|nechta|yuk bor/.test(q)) {
+    return { reply: cargo.length ? `Jami ${cargo.length} ta yuk so‘rovi bor. Oxirgilari: ${fmt(cargo)}.` : "Hozircha yuk so‘rovlari yo‘q.", action: NO_ACTION };
+  }
+  return { reply: "Masalan: “B tumaniga yuk bormi?”, “Y02 qatnoviga yuk bormi?” yoki “Nechta yuk bor?” deb so‘rang.", action: NO_ACTION };
 }

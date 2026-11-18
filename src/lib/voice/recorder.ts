@@ -2,8 +2,16 @@
 
 /** MediaRecorder bilan yozib olish (maks. muddat bilan). */
 export type Recording = { stop: () => void; result: Promise<Blob> };
+export type RecordOptions = {
+  maxMs?: number;
+  /** 0..1 — jonli ovoz darajasi (vizualizatsiya uchun) */
+  onLevel?: (level: number) => void;
+  /** Gap tugagach (≈1.3 s jimlik) avtomatik to‘xtash — ovozli suhbat rejimi */
+  autoStop?: boolean;
+};
 
-export async function startRecording(maxMs = 12_000): Promise<Recording> {
+export async function startRecording(opts: RecordOptions | number = {}): Promise<Recording> {
+  const { maxMs = 12_000, onLevel, autoStop = false } = typeof opts === "number" ? { maxMs: opts } : opts;
   if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
     throw new VoiceError("unsupported");
   }
@@ -14,10 +22,49 @@ export async function startRecording(maxMs = 12_000): Promise<Recording> {
     throw new VoiceError(e instanceof DOMException && (e.name === "NotAllowedError" || e.name === "SecurityError") ? "denied" : "no-mic");
   }
   const recorder = new MediaRecorder(stream);
+
+  // Jonli daraja + jimlikni aniqlash
+  let raf = 0;
+  let meterCtx: AudioContext | null = null;
+  if (onLevel || autoStop) {
+    const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    meterCtx = new Ctx();
+    const analyser = meterCtx.createAnalyser();
+    analyser.fftSize = 512;
+    meterCtx.createMediaStreamSource(stream).connect(analyser);
+    const data = new Uint8Array(analyser.fftSize);
+    const started = performance.now();
+    let spoke = false;
+    let quietSince = 0;
+    const tick = () => {
+      analyser.getByteTimeDomainData(data);
+      let sum = 0;
+      for (const v of data) sum += ((v - 128) / 128) ** 2;
+      const rms = Math.sqrt(sum / data.length);
+      onLevel?.(Math.min(1, rms * 6));
+      if (autoStop) {
+        const now = performance.now();
+        if (rms > 0.045) {
+          spoke = true;
+          quietSince = 0;
+        } else if (spoke) {
+          quietSince ||= now;
+          if (now - quietSince > 1300) return stop();
+        } else if (now - started > 7000) {
+          return stop();
+        }
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+  }
   const chunks: BlobPart[] = [];
   recorder.ondataavailable = (e) => e.data.size > 0 && chunks.push(e.data);
   const result = new Promise<Blob>((resolve, reject) => {
     recorder.onstop = () => {
+      cancelAnimationFrame(raf);
+      void meterCtx?.close();
+      onLevel?.(0);
       stream.getTracks().forEach((t) => t.stop());
       clearTimeout(timer);
       if (chunks.length === 0) reject(new VoiceError("empty"));

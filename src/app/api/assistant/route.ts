@@ -1,8 +1,8 @@
-import { getTrips } from "@/lib/store";
+import { getTrips, listRequests } from "@/lib/store";
 import { askGemini, hasGemini } from "@/lib/gemini";
-import { parseIntent } from "@/lib/intent";
+import { parseCarrierIntent, parseIntent } from "@/lib/intent";
 import type { ApiResponse } from "@/lib/types";
-import type { AssistantReply, ChatTurn } from "@/lib/assistant-types";
+import type { AssistantMode, AssistantReply, CargoSummary, ChatTurn } from "@/lib/assistant-types";
 import { NO_ACTION } from "@/lib/assistant-types";
 import { getSttProvider, getTtsProvider } from "@/lib/voice/server";
 
@@ -59,7 +59,12 @@ export async function POST(request: Request) {
         .map((t) => ({ role: t.role, text: t.text.slice(0, 1000) }))
     : [];
 
+  const mode: AssistantMode = body.mode === "carrier" ? "carrier" : "shipper";
   const { trips } = await getTrips();
+  const cargo: CargoSummary[] =
+    mode === "carrier"
+      ? (await listRequests()).requests.map(({ code, tripId, route, when, cargo }) => ({ code, tripId, route, when, cargo }))
+      : [];
   const now = new Date();
 
   // 1) O‘zbekcha STT provayderi bo‘lsa — avval matnga o‘giramiz
@@ -84,7 +89,7 @@ export async function POST(request: Request) {
 
   if (hasGemini()) {
     try {
-      const result = await askGemini({ message: text, audio, history, trips, now });
+      const result = await askGemini({ mode, cargo, message: text, audio, history, trips, now });
       return json<AssistantReply>({ ok: true, data: { ...result, transcript: transcript ?? result.transcript, source: "gemini" } });
     } catch (error) {
       console.warn("[assistant] Gemini xatosi, lokal tahlilchiga o‘tildi:", error instanceof Error ? error.message : error);
@@ -97,5 +102,6 @@ export async function POST(request: Request) {
       data: { reply: "Ovozli xabarni hozir tushunib bo‘lmadi. Iltimos, savolingizni yozib yuboring.", action: NO_ACTION, source: "local" },
     });
   }
-  return json<AssistantReply>({ ok: true, data: { ...parseIntent(text, trips, now), transcript, source: "local" } });
+  const local = mode === "carrier" ? parseCarrierIntent(text, trips, cargo) : parseIntent(text, trips, now);
+  return json<AssistantReply>({ ok: true, data: { ...local, transcript, source: "local" } });
 }

@@ -2,8 +2,8 @@ import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypt
 import { cookies } from "next/headers";
 import { getDb } from "./mongodb";
 
-export type Role = "admin" | "shipper" | "carrier";
-export const ROLE_LABEL: Record<Role, string> = { admin: "Admin", shipper: "Yuk egasi", carrier: "Transport egasi" };
+import type { Role } from "./auth-types";
+export { ROLE_LABEL, type Role } from "./auth-types";
 export type User = { login: string; name: string; role: Role; passwordHash: string; createdAt: string };
 export type Session = { login: string; name: string; role: Role };
 
@@ -35,7 +35,31 @@ async function users() {
   return col;
 }
 
+/** Demo hisoblar (login = parol). */
+const DEMO_USERS: { login: string; name: string; role: Role }[] = [
+  { login: "yuk_egasi", name: "Yuk Egasi", role: "shipper" },
+  { login: "transport_egasi", name: "Transport Egasi", role: "carrier" },
+  { login: "admin", name: "Administrator", role: "admin" },
+];
+let demoSeeded: Promise<void> | null = null;
+function ensureDemoUsers(): Promise<void> {
+  demoSeeded ??= (async () => {
+    const col = await users();
+    for (const d of DEMO_USERS) {
+      const exists = col ? await col.findOne({ login: d.login }) : memoryUsers.find((u) => u.login === d.login);
+      if (exists) continue;
+      const user: User = { ...d, passwordHash: hashPassword(d.login), createdAt: new Date().toISOString() };
+      if (col) await col.insertOne(user).catch(() => {});
+      else memoryUsers.push(user);
+    }
+  })().catch(() => {
+    demoSeeded = null;
+  });
+  return demoSeeded;
+}
+
 export async function findUser(login: string): Promise<User | null> {
+  await ensureDemoUsers();
   const col = await users();
   if (col) return col.findOne({ login }, { projection: { _id: 0 } });
   return memoryUsers.find((u) => u.login === login) ?? null;
@@ -48,6 +72,7 @@ export async function createUser(user: User): Promise<void> {
 }
 
 export async function adminExists(): Promise<boolean> {
+  await ensureDemoUsers();
   const col = await users();
   if (col) return (await col.countDocuments({ role: "admin" }, { limit: 1 })) > 0;
   return memoryUsers.some((u) => u.role === "admin");
@@ -84,3 +109,12 @@ export async function getSession(): Promise<Session | null> {
 }
 
 export const SESSION_COOKIE = COOKIE;
+
+export async function countUsers(): Promise<Record<Role, number>> {
+  await ensureDemoUsers();
+  const out: Record<Role, number> = { admin: 0, shipper: 0, carrier: 0 };
+  const col = await users();
+  const list = col ? await col.find({}, { projection: { role: 1 } }).toArray() : memoryUsers;
+  for (const u of list) out[u.role as Role]++;
+  return out;
+}

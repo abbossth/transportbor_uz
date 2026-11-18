@@ -1,3 +1,4 @@
+import type { RequestStatus } from "./status";
 import type { FieldErrors } from "./validate";
 
 export type DataSource = "mongodb" | "demo";
@@ -11,6 +12,11 @@ export type RequestRecord = {
   cargo: string;
   /** ISO */
   createdAt: string;
+  /** Tizimga kirgan yuk egasining logini (bo‘lsa) */
+  owner?: string;
+  /** Qo‘lda o‘rnatilgan holat (transport egasi / admin / bekor qilish) */
+  status?: RequestStatus;
+  updatedAt?: string;
 };
 
 /** Barcha API javoblari uchun yagona format. */

@@ -3,6 +3,7 @@ import { findTrip } from "@/lib/trips";
 import { validateRequest } from "@/lib/validate";
 import { buildRecord, getTrips, listRequests, saveRequest } from "@/lib/store";
 import type { ApiResponse, RequestRecord } from "@/lib/types";
+import { getSession } from "@/lib/auth";
 
 function json<T>(body: ApiResponse<T>, status = 200) {
   return Response.json(body, { status });
@@ -34,7 +35,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { record } = await saveRequest(buildRecord(result.data, trip));
+    const session = await getSession().catch(() => null);
+    const record0 = buildRecord(result.data, trip);
+    if (session) record0.owner = session.login;
+    const { record } = await saveRequest(record0);
     return json<RequestRecord>({ ok: true, data: record }, 201);
   } catch (error) {
     console.error("[requests] saqlashda xato:", error);

@@ -1,6 +1,6 @@
 import { DESTINATIONS, routeLabel, whenLabel, type Trip } from "./trips";
 import { dayLabel } from "./dates";
-import { sanitizeAction, type AssistantAction, type ChatTurn } from "./assistant-types";
+import { sanitizeAction, type AssistantAction, type AssistantMode, type CargoSummary, type ChatTurn } from "./assistant-types";
 
 export const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash";
 export const hasGemini = () => Boolean(process.env.GEMINI_API_KEY);
@@ -21,6 +21,20 @@ const RESPONSE_SCHEMA = {
   },
   required: ["reply", "action"],
 } as const;
+
+function carrierInstruction(trips: readonly Trip[], cargo: readonly CargoSummary[], now: Date): string {
+  const list = trips.map((t) => `- ${t.id}: ${routeLabel(t)}; ${whenLabel(t)}`).join("\n");
+  const reqs = cargo.length ? cargo.slice(0, 40).map((c) => `- ${c.code} → ${c.tripId} (${c.route}): ${c.cargo}`).join("\n") : "(hozircha yuk so‘rovi yo‘q)";
+  return `Sen "Yo‘ldosh" — TransportBor yordamchisisan. Hozir TRANSPORT EGASI bilan gaplashyapsan: unga qatnovlariga kelgan yuk so‘rovlarini topib berasan.
+- O‘zbek tilida (lotin), qisqa (1–3 gap), do‘stona javob ber. Faqat quyidagi ma’lumotlardan foydalan, yangi yuk to‘qima.
+- Narx, GPS, haydovchiga xabar yuborish bu sinov loyihasida yo‘q.
+- action: hudud bo‘yicha so‘rasa "filter" (value: ${DESTINATIONS.map((d) => `"${d}"`).join(", ")}), aks holda "none".
+Hozirgi vaqt: ${now.toISOString()}.
+QATNOVLAR:
+${list}
+YUK SO‘ROVLARI (yuk egasi ismi ko‘rsatilmaydi):
+${reqs}`;
+}
 
 function systemInstruction(trips: readonly Trip[], now: Date): string {
   const list = trips.map((t) => `- ${t.id}: ${routeLabel(t)}; jo‘nash: ${whenLabel(t)} (${dayLabel(t.date)}); ISO ${t.departure}`).join("\n");
@@ -48,6 +62,8 @@ ${list}`;
 }
 
 type GeminiInput = {
+  mode?: AssistantMode;
+  cargo?: readonly CargoSummary[];
   message?: string;
   audio?: { data: string; mimeType: string };
   history: ChatTurn[];
@@ -57,7 +73,7 @@ type GeminiInput = {
 
 export type GeminiResult = { reply: string; action: AssistantAction; transcript?: string };
 
-export async function askGemini({ message, audio, history, trips, now }: GeminiInput): Promise<GeminiResult> {
+export async function askGemini({ mode = "shipper", cargo = [], message, audio, history, trips, now }: GeminiInput): Promise<GeminiResult> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY yo‘q");
 
@@ -79,7 +95,7 @@ export async function askGemini({ message, audio, history, trips, now }: GeminiI
     method: "POST",
     headers: { "Content-Type": "application/json", "x-goog-api-key": key },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: systemInstruction(trips, now) }] },
+      systemInstruction: { parts: [{ text: mode === "carrier" ? carrierInstruction(trips, cargo, now) : systemInstruction(trips, now) }] },
       contents,
       generationConfig: {
         temperature: 0.3,
@@ -99,7 +115,7 @@ export async function askGemini({ message, audio, history, trips, now }: GeminiI
 
   return {
     reply: parsed.reply.trim().slice(0, 800),
-    action: sanitizeAction(parsed.action),
+    action: mode === "carrier" && sanitizeAction(parsed.action).type === "select" ? { type: "none", value: "" } : sanitizeAction(parsed.action),
     transcript: typeof parsed.transcript === "string" && parsed.transcript.trim() ? parsed.transcript.trim().slice(0, 300) : undefined,
   };
 }

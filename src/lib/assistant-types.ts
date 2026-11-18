@@ -31,3 +31,8 @@ export function sanitizeAction(raw: unknown): AssistantAction {
   }
   return NO_ACTION;
 }
+
+export type AssistantMode = "shipper" | "carrier";
+
+/** Transport egasi rejimi uchun yuk xulosasi (shaxsiy ma’lumotsiz). */
+export type CargoSummary = { code: string; tripId: string; route: string; when: string; cargo: string };
