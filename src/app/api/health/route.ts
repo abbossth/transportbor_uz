@@ -1,6 +1,6 @@
 import { getDb } from "@/lib/mongodb";
 
-export async function GET(_request: Request) {
+export async function GET() {
   try {
     const start = Date.now();
     await getDb().command({ ping: 1 });
