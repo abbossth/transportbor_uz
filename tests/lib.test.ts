@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { TRIPS, filterTrips, countByDestination, findTrip, routeLabel, groupByDate } from "../src/lib/trips.ts";
 import { isBlank, validateRequest, MESSAGES } from "../src/lib/validate.ts";
 import { dayLabel, untilLabel } from "../src/lib/dates.ts";
+import { parseIntent } from "../src/lib/intent.ts";
+import { sanitizeAction } from "../src/lib/assistant-types.ts";
 
 const IDS = TRIPS.map((t) => t.id);
 
@@ -51,4 +53,32 @@ test("Sana yorliqlari", () => {
   assert.equal(untilLabel(iso, new Date("2026-11-18T07:00:00+05:00")), "2 kun 3 soat qoldi");
   assert.equal(untilLabel(iso, new Date("2026-11-20T09:15:00+05:00")), "45 daqiqa qoldi");
   assert.equal(untilLabel(iso, new Date("2026-11-20T10:00:00+05:00")), "Jo‘nab ketgan");
+});
+
+
+
+
+test("Lokal tahlilchi buyruqlarni taniydi", () => {
+  const now = new Date("2026-11-18T12:00:00+05:00");
+  assert.deepEqual(parseIntent("B tumaniga qatnovlar", TRIPS, now).action, { type: "filter", value: "B tumani" });
+  assert.deepEqual(parseIntent("б тумани", TRIPS, now).action, { type: "filter", value: "B tumani" });
+  assert.deepEqual(parseIntent("C tumaniga", TRIPS, now).action, { type: "filter", value: "C tumani" });
+  assert.deepEqual(parseIntent("с туманига", TRIPS, now).action, { type: "filter", value: "C tumani" });
+  assert.deepEqual(parseIntent("Y02 ni tanla", TRIPS, now).action, { type: "select", value: "Y02" });
+  assert.deepEqual(parseIntent("y 2 ni och", TRIPS, now).action, { type: "select", value: "Y02" });
+  assert.deepEqual(parseIntent("ikkinchi qatnov", TRIPS, now).action, { type: "select", value: "Y02" });
+  assert.deepEqual(parseIntent("barchasi", TRIPS, now).action, { type: "filter", value: "Barchasi" });
+  assert.match(parseIntent("Eng yaqin qatnov qachon?", TRIPS, now).reply, /Y01/);
+  assert.match(parseIntent("narxi qancha?", TRIPS, now).reply, /narx hisoblash yo‘q/);
+  assert.equal(parseIntent("A tumanidan", TRIPS, now).action.type, "none");
+  assert.equal(parseIntent("Y09", TRIPS, now).action.type, "none");
+});
+
+test("Gemini amali whitelist bo'yicha tekshiriladi", () => {
+  assert.deepEqual(sanitizeAction({ type: "filter", value: "b tumani" }), { type: "filter", value: "B tumani" });
+  assert.deepEqual(sanitizeAction({ type: "filter", value: "D tumani" }), { type: "none", value: "" });
+  assert.deepEqual(sanitizeAction({ type: "select", value: "y05" }), { type: "select", value: "Y05" });
+  assert.deepEqual(sanitizeAction({ type: "select", value: "Y06" }), { type: "none", value: "" });
+  assert.deepEqual(sanitizeAction({ type: "delete", value: "x" }), { type: "none", value: "" });
+  assert.deepEqual(sanitizeAction(null), { type: "none", value: "" });
 });

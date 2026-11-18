@@ -7,8 +7,15 @@ import { ALL, isDestination } from "@/lib/trips";
 async function TripsSection({ searchParams }: { searchParams: PageProps<"/">["searchParams"] }) {
   const params = await searchParams;
   const to = Array.isArray(params.to) ? params.to[0] : params.to;
+  const trip = Array.isArray(params.trip) ? params.trip[0] : params.trip;
   const { trips } = await getTrips();
-  return <TripBoard trips={trips} initialFilter={isDestination(to) ? to : ALL} />;
+  return (
+    <TripBoard
+      trips={trips}
+      initialFilter={isDestination(to) ? to : ALL}
+      initialTripId={typeof trip === "string" ? trip.toUpperCase() : undefined}
+    />
+  );
 }
 
 function BoardSkeleton() {

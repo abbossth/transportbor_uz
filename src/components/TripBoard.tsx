@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ALL, countByDestination, filterTrips, groupByDate, type Destination, type Trip } from "@/lib/trips";
 import { dayLabel } from "@/lib/dates";
 import { useNow } from "@/lib/useNow";
@@ -9,12 +9,13 @@ import { TripCard } from "./TripCard";
 import { EmptyState } from "./EmptyState";
 import { RequestDialog } from "./RequestDialog";
 import { HeroStats } from "./HeroStats";
+import { UI_ACTION_EVENT, type UiAction } from "@/lib/ui-events";
 
-type Props = { trips: Trip[]; initialFilter: Destination };
+type Props = { trips: Trip[]; initialFilter: Destination; initialTripId?: string };
 
-export function TripBoard({ trips, initialFilter }: Props) {
+export function TripBoard({ trips, initialFilter, initialTripId }: Props) {
   const [filter, setFilterState] = useState<Destination>(initialFilter);
-  const [selected, setSelected] = useState<Trip | null>(null);
+  const [selected, setSelected] = useState<Trip | null>(() => trips.find((t) => t.id === initialTripId) ?? null);
   const listRef = useRef<HTMLElement>(null);
   const now = useNow();
 
@@ -29,6 +30,32 @@ export function TripBoard({ trips, initialFilter }: Props) {
     else url.searchParams.set("to", value);
     window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
   }, []);
+
+  // Yordamchi amallari: filtr → ro‘yxatga scroll; select → so‘rov shaklini ochish
+  useEffect(() => {
+    function onAction(event: Event) {
+      const action = (event as CustomEvent<UiAction>).detail;
+      if (action.type === "filter") {
+        setFilter(action.value);
+        const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        listRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+      } else if (action.type === "select") {
+        const trip = trips.find((t) => t.id === action.value);
+        if (trip) setSelected(trip);
+      }
+    }
+    window.addEventListener(UI_ACTION_EVENT, onAction);
+    return () => window.removeEventListener(UI_ACTION_EVENT, onAction);
+  }, [trips, setFilter]);
+
+  function closeDialog() {
+    setSelected(null);
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("trip")) {
+      url.searchParams.delete("trip");
+      window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+    }
+  }
 
   return (
     <>
@@ -70,7 +97,7 @@ export function TripBoard({ trips, initialFilter }: Props) {
         </div>
       </section>
 
-      <RequestDialog trip={selected} tripIds={tripIds} onClose={() => setSelected(null)} />
+      <RequestDialog trip={selected} tripIds={tripIds} onClose={closeDialog} />
     </>
   );
 }
