@@ -78,6 +78,10 @@ h1, h2, h3 {
   outline: 3px solid var(--brand);
   outline-offset: 2px;
 }
+/* Dasturiy fokus (tabIndex=-1) uchun ramka kerak emas */
+[tabindex="-1"]:focus-visible {
+  outline: none;
+}
 
 html.scroll-locked {
   overflow: hidden;
