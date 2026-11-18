@@ -18,7 +18,7 @@ export function SiteHeader() {
             alt="TransportBor"
             width={168}
             height={34}
-            className="hidden h-[34px] w-auto sm:block dark:sm:hidden group-data-[overlay=true]/header:sm:hidden"
+            className="hidden h-[34px] w-auto sm:block dark:sm:hidden"
           />
           {/* Qorong‘i fon uchun logo */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -27,7 +27,7 @@ export function SiteHeader() {
             alt="TransportBor"
             width={168}
             height={34}
-            className="hidden h-[34px] w-auto dark:sm:block group-data-[overlay=true]/header:sm:block"
+            className="hidden h-[34px] w-auto dark:sm:block"
           />
         </Link>
         <div className="flex min-w-0 items-center gap-1 sm:gap-2">

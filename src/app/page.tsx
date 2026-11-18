@@ -1,6 +1,10 @@
 import { Suspense } from "react";
 import { Hero } from "@/components/home/Hero";
 import { TrustRow } from "@/components/home/TrustRow";
+import { Regions } from "@/components/home/Regions";
+import { HowItWorks } from "@/components/home/HowItWorks";
+import { AssistantPromo } from "@/components/home/AssistantPromo";
+import { Photo } from "@/components/Photo";
 import { TripBoard } from "@/components/TripBoard";
 import { getTrips } from "@/lib/store";
 import { ALL, isDestination } from "@/lib/trips";
@@ -40,6 +44,9 @@ export default function Home({ searchParams }: PageProps<"/">) {
       <Suspense fallback={<BoardSkeleton />}>
         <TripsSection searchParams={searchParams} />
       </Suspense>
+      <Regions />
+      <HowItWorks photo={<Photo name="van-city" sizes="(min-width: 1024px) 50vw, 100vw" tone="teal" />} />
+      <AssistantPromo />
     </>
   );
 }

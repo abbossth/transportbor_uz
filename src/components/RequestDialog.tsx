@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { AlertCircle, ArrowLeft, CalendarClock, Info, Loader2, Send, X } from "lucide-react";
+import { AlertCircle, ArrowLeft, CalendarClock, Info, Loader2, PackageCheck, Send, X } from "lucide-react";
 import { routeLabel, whenLabel, type Trip } from "@/lib/trips";
 import { dayLabel } from "@/lib/dates";
 import { CARGO_MAX, NAME_MAX, validateRequest, type FieldErrors } from "@/lib/validate";
 import type { ApiResponse, RequestRecord } from "@/lib/types";
 import { Confirmation } from "./Confirmation";
+import type { ReactNode } from "react";
+import { Photo } from "./Photo";
 
 type Props = {
   trip: Trip | null;
@@ -49,8 +51,8 @@ export function RequestDialog({ trip, tripIds, onClose, onSubmitted }: Props) {
         if (e.target === e.currentTarget) dialogRef.current?.close();
       }}
     >
-      <div className="tb-dialog-panel flex max-h-[inherit] flex-col overflow-y-auto overscroll-contain rounded-t-[20px] bg-card text-ink shadow-pop sm:rounded-[20px]">
-        <span className="mx-auto mt-2.5 h-1.5 w-10 shrink-0 rounded-full bg-line sm:hidden" aria-hidden />
+      <div className="tb-dialog-panel relative flex max-h-[inherit] flex-col overflow-y-auto overscroll-contain rounded-t-[24px] bg-card text-ink shadow-pop sm:rounded-[24px] md:overflow-hidden">
+        <span className="absolute left-1/2 top-2.5 z-10 h-1.5 w-10 -translate-x-1/2 rounded-full bg-white/70 sm:hidden" aria-hidden />
         {trip && (
           <RequestFlow
             key={`${trip.id}-${session}`}
@@ -83,6 +85,8 @@ function RequestFlow({ trip, tripIds, close, onSubmitted }: FlowProps) {
   const nameRef = useRef<HTMLInputElement>(null);
   const cargoRef = useRef<HTMLTextAreaElement>(null);
   const successRef = useRef<HTMLHeadingElement>(null);
+  const nameWrapRef = useRef<HTMLDivElement>(null);
+  const cargoWrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (record) successRef.current?.focus();
@@ -90,6 +94,13 @@ function RequestFlow({ trip, tripIds, close, onSubmitted }: FlowProps) {
   }, [record]);
 
   function focusFirstError(errs: FieldErrors) {
+    // Xatoli maydonlar yengil chayqaladi (300ms)
+    for (const [has, el] of [[errs.name, nameWrapRef.current], [errs.cargo, cargoWrapRef.current]] as const) {
+      if (!has || !el) continue;
+      el.classList.remove("tb-shake");
+      void el.offsetWidth;
+      el.classList.add("tb-shake");
+    }
     if (errs.name) nameRef.current?.focus();
     else if (errs.cargo) cargoRef.current?.focus();
   }
@@ -143,49 +154,25 @@ function RequestFlow({ trip, tripIds, close, onSubmitted }: FlowProps) {
     setSubmitError(null);
   }
 
-  if (record) {
-    return <Confirmation ref={successRef} record={record} onBackToList={close} onAgain={again} />;
-  }
-
   const fieldBase =
-    "w-full rounded-xl border bg-bg px-4 py-3 text-base text-ink placeholder:text-muted/80 transition-colors focus:bg-card focus:outline-none focus-visible:outline-3 focus-visible:outline-brand";
+    "w-full rounded-2xl border bg-bg px-4 py-3 text-base text-ink placeholder:text-muted/80 transition-colors focus:bg-card focus:outline-none focus-visible:outline-3 focus-visible:outline-brand";
 
-  return (
-    <form noValidate onSubmit={handleSubmit} className="flex flex-col">
-      <div className="flex items-start justify-between gap-3 px-5 pt-4 sm:px-6 sm:pt-6">
+  const body = record ? (
+    <Confirmation ref={successRef} record={record} onBackToList={close} onAgain={again} />
+  ) : (
+    <form noValidate onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+      <div className="flex items-start justify-between gap-3 px-5 pt-5 sm:px-7 sm:pt-7">
         <div>
-          <p className="text-sm font-semibold text-brand-ink">Tanlangan qatnov</p>
-          <h2 id="dialog-title" className="text-xl font-extrabold sm:text-2xl">
+          <p className="text-sm font-semibold text-brand-ink">Tanlangan qatnov · {trip.id}</p>
+          <h2 id="dialog-title" className="text-2xl font-extrabold tracking-[-0.02em]">
             So‘rov yuborish
           </h2>
         </div>
-        <button
-          type="button"
-          onClick={close}
-          aria-label="Yopish"
-          className="grid size-10 shrink-0 place-items-center rounded-full border border-line text-muted transition-colors hover:bg-bg hover:text-ink"
-        >
-          <X className="size-5" aria-hidden />
-        </button>
+        <CloseButton onClick={close} />
       </div>
 
-      {/* Tafsilot */}
-      <section aria-label="Qatnov tafsiloti" className="mx-5 mt-4 rounded-[16px] border border-line bg-bg p-4 sm:mx-6">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span className="rounded-lg bg-brand-soft px-2.5 py-1 font-mono text-sm font-bold tabular-nums text-brand-ink">{trip.id}</span>
-          <p className="min-w-0 break-words text-lg font-bold">{routeLabel(trip)}</p>
-        </div>
-        <p className="mt-2 flex items-center gap-2 text-sm text-muted">
-          <CalendarClock className="size-4 shrink-0" aria-hidden />
-          <span>
-            Jo‘nash vaqti: <strong className="font-semibold text-ink tabular-nums">{whenLabel(trip)}</strong>
-            <span className="hidden sm:inline"> · {dayLabel(trip.date)}</span>
-          </span>
-        </p>
-      </section>
-
-      <div className="flex flex-col gap-4 px-5 py-5 sm:px-6">
-        <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-4 px-5 py-5 sm:px-7">
+        <div ref={nameWrapRef} className="flex flex-col gap-1.5">
           <label htmlFor="req-name" className="text-sm font-semibold">
             Ismingiz <span className="text-danger-ink" aria-hidden>*</span>
           </label>
@@ -216,7 +203,7 @@ function RequestFlow({ trip, tripIds, close, onSubmitted }: FlowProps) {
           )}
         </div>
 
-        <div className="flex flex-col gap-1.5">
+        <div ref={cargoWrapRef} className="flex flex-col gap-1.5">
           <div className="flex items-baseline justify-between gap-2">
             <label htmlFor="req-cargo" className="text-sm font-semibold">
               Yuk tavsifi <span className="text-danger-ink" aria-hidden>*</span>
@@ -251,7 +238,7 @@ function RequestFlow({ trip, tripIds, close, onSubmitted }: FlowProps) {
         </div>
 
         {submitError && (
-          <p role="alert" className="flex items-start gap-2 rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm font-medium text-danger-ink">
+          <p role="alert" className="flex items-start gap-2 rounded-2xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm font-medium text-danger-ink">
             <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden />
             {submitError}
           </p>
@@ -263,11 +250,11 @@ function RequestFlow({ trip, tripIds, close, onSubmitted }: FlowProps) {
         </p>
       </div>
 
-      <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-line bg-card px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
+      <div className="sticky bottom-0 mt-auto flex flex-col-reverse gap-2 border-t border-line bg-card px-5 py-4 sm:flex-row sm:justify-end sm:px-7">
         <button
           type="button"
           onClick={close}
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-line bg-card px-5 text-sm font-semibold transition-colors hover:bg-bg"
+          className="press inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-line bg-card px-5 text-sm font-semibold hover:bg-bg"
         >
           <ArrowLeft className="size-4" aria-hidden />
           Ortga
@@ -276,12 +263,70 @@ function RequestFlow({ trip, tripIds, close, onSubmitted }: FlowProps) {
           type="submit"
           disabled={submitting}
           aria-busy={submitting}
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-brand px-6 text-sm font-bold text-on-brand transition-colors hover:bg-brand-hover disabled:cursor-wait disabled:opacity-70"
+          className="press group inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-brand px-6 text-sm font-bold text-on-brand hover:bg-brand-hover disabled:cursor-wait disabled:opacity-70"
         >
-          {submitting ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Send className="size-4" aria-hidden />}
+          {submitting ? (
+            <Loader2 className="size-4 animate-spin" aria-hidden />
+          ) : (
+            <Send className="size-4 transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden />
+          )}
           {submitting ? "Yuborilmoqda…" : "So‘rov yuborish"}
         </button>
       </div>
     </form>
+  );
+
+  return (
+    <div className="grid min-h-0 md:max-h-[calc(100dvh-48px)] md:grid-cols-[340px_1fr]">
+      <TripVisual trip={trip} done={Boolean(record)}>
+        {record ? (
+          <>
+            <PackageCheck className="size-6" aria-hidden />
+            <p className="mt-2 font-display text-lg font-extrabold leading-tight">Yukingiz yo‘lga tayyor</p>
+            <p className="mt-1 text-sm text-white/80">So‘rov {record.code} raqami bilan saqlandi.</p>
+          </>
+        ) : null}
+      </TripVisual>
+      <div className="flex min-h-0 flex-col md:overflow-y-auto">{body}</div>
+    </div>
+  );
+}
+
+function CloseButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="Yopish"
+      className="press grid size-11 shrink-0 place-items-center rounded-full border border-line text-muted hover:bg-bg hover:text-ink"
+    >
+      <X className="size-5" aria-hidden />
+    </button>
+  );
+}
+
+/** Chap ustun (desktop) / tepadagi foto-banner (mobil): tanlangan qatnov tafsiloti glass kartochkada. */
+function TripVisual({ trip, done, children }: { trip: Trip; done: boolean; children?: ReactNode }) {
+  return (
+    <aside aria-label="Qatnov tafsiloti" className="relative isolate flex min-h-36 flex-col justify-end overflow-hidden p-4 text-white sm:p-5 md:min-h-[540px]">
+      <div className="absolute inset-0 -z-10">
+        <Photo name={done ? "handover" : "boxes"} sizes="(min-width: 768px) 340px, 100vw" tone={done ? "green" : "teal"} />
+      </div>
+      <div aria-hidden className="absolute inset-0 -z-10 bg-gradient-to-t from-[#0b1220]/90 via-[#0b1220]/45 to-[#0b1220]/10" />
+      <div className="glass rounded-[20px] p-4">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="rounded-lg bg-white/20 px-2.5 py-1 font-mono text-sm font-bold tabular-nums">{trip.id}</span>
+          <p className="min-w-0 break-words font-display text-lg font-extrabold leading-tight">{routeLabel(trip)}</p>
+        </div>
+        <p className="mt-2 flex items-center gap-2 text-sm text-white/85">
+          <CalendarClock className="size-4 shrink-0" aria-hidden />
+          <span>
+            Jo‘nash vaqti: <strong className="font-semibold text-white tabular-nums">{whenLabel(trip)}</strong>
+            <span className="hidden md:inline"> · {dayLabel(trip.date)}</span>
+          </span>
+        </p>
+      </div>
+      {children && <div className="mt-3 hidden md:block">{children}</div>}
+    </aside>
   );
 }

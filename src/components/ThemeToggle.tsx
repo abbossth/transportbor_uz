@@ -29,7 +29,7 @@ export function ThemeToggle() {
       onClick={toggle}
       aria-label={dark ? "Kunduzgi rejimga o‘tish" : "Tungi rejimga o‘tish"}
       title={dark ? "Kunduzgi rejim" : "Tungi rejim"}
-      className="press grid size-10 place-items-center rounded-full border border-line bg-card text-ink group-data-[overlay=true]/header:border-white/25 group-data-[overlay=true]/header:bg-white/10 group-data-[overlay=true]/header:text-white hover:bg-brand-soft"
+      className="press grid size-10 place-items-center rounded-full border border-line bg-card text-ink hover:bg-brand-soft"
     >
       {dark ? <Sun className="size-5" aria-hidden /> : <Moon className="size-5" aria-hidden />}
     </button>

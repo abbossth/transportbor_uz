@@ -12,3 +12,10 @@ export function dispatchUiAction(action: UiAction) {
 
 /** Header'dagi mikrofon → yordamchini ochib, yozishni boshlash. */
 export const ASSISTANT_VOICE_EVENT = "tb:assistant-voice";
+
+/** Yordamchini ochish (ixtiyoriy: darhol yuboriladigan xabar). */
+export const ASSISTANT_OPEN_EVENT = "tb:assistant-open";
+export type AssistantOpenDetail = { message?: string };
+export function openAssistant(detail: AssistantOpenDetail = {}) {
+  window.dispatchEvent(new CustomEvent<AssistantOpenDetail>(ASSISTANT_OPEN_EVENT, { detail }));
+}

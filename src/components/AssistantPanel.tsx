@@ -7,7 +7,7 @@ import { TRIPS } from "@/lib/trips";
 import { parseIntent } from "@/lib/intent";
 import type { ApiResponse } from "@/lib/types";
 import type { AssistantAction, AssistantReply, ChatTurn } from "@/lib/assistant-types";
-import { ASSISTANT_VOICE_EVENT, dispatchUiAction } from "@/lib/ui-events";
+import { ASSISTANT_OPEN_EVENT, ASSISTANT_VOICE_EVENT, dispatchUiAction, type AssistantOpenDetail } from "@/lib/ui-events";
 import { startRecording, toWav16kBase64, VoiceError, voiceErrorMessage } from "@/lib/voice/recorder";
 import { browserSttSupported, listenOnce } from "@/lib/voice/browser-stt";
 import { speak, stopSpeaking } from "@/lib/voice/speak";
@@ -181,16 +181,27 @@ export function AssistantPanel() {
 
   // Header'dagi mikrofon tugmasi
   const toggleVoiceRef = useRef(toggleVoice);
+  const sendRef = useRef(send);
   useEffect(() => {
     toggleVoiceRef.current = toggleVoice;
-  }, [toggleVoice]);
+    sendRef.current = send;
+  }, [toggleVoice, send]);
   useEffect(() => {
     const onVoice = () => {
       setOpen(true);
       void toggleVoiceRef.current();
     };
+    const onOpen = (e: Event) => {
+      setOpen(true);
+      const msg = (e as CustomEvent<AssistantOpenDetail>).detail?.message;
+      if (msg) void sendRef.current(msg);
+    };
     window.addEventListener(ASSISTANT_VOICE_EVENT, onVoice);
-    return () => window.removeEventListener(ASSISTANT_VOICE_EVENT, onVoice);
+    window.addEventListener(ASSISTANT_OPEN_EVENT, onOpen);
+    return () => {
+      window.removeEventListener(ASSISTANT_VOICE_EVENT, onVoice);
+      window.removeEventListener(ASSISTANT_OPEN_EVENT, onOpen);
+    };
   }, []);
 
   function onSubmit(e: FormEvent) {

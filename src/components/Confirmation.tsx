@@ -1,15 +1,36 @@
 "use client";
 
-import { forwardRef } from "react";
-import { CheckCircle2, Info, List, RotateCcw } from "lucide-react";
+import { forwardRef, useEffect, useRef } from "react";
+import { Info, List, RotateCcw } from "lucide-react";
 import type { RequestRecord } from "@/lib/types";
 
 type Props = { record: RequestRecord; onBackToList: () => void; onAgain: () => void };
 
-export const Confirmation = forwardRef<HTMLHeadingElement, Props>(function Confirmation(
-  { record, onBackToList, onAgain },
-  headingRef,
-) {
+const BRAND_COLORS = ["#12B76A", "#0BA5A4", "#4ADE94", "#E7F8EF"];
+
+/** Qisqa (≈1 soniya) brend rangidagi confetti — dialog ichidagi canvas'da (top-layer ustida). */
+function useConfetti(canvas: React.RefObject<HTMLCanvasElement | null>) {
+  useEffect(() => {
+    if (!canvas.current || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let cancelled = false;
+    let reset: (() => void) | undefined;
+    void import("canvas-confetti").then(({ default: confetti }) => {
+      if (cancelled || !canvas.current) return;
+      const fire = confetti.create(canvas.current, { resize: true, useWorker: true });
+      reset = fire.reset;
+      void fire({ particleCount: 70, spread: 75, startVelocity: 32, gravity: 1.3, decay: 0.9, ticks: 70, scalar: 0.9, origin: { x: 0.5, y: 0.22 }, colors: BRAND_COLORS });
+    });
+    return () => {
+      cancelled = true;
+      reset?.();
+    };
+  }, [canvas]);
+}
+
+export const Confirmation = forwardRef<HTMLHeadingElement, Props>(function Confirmation({ record, onBackToList, onAgain }, headingRef) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useConfetti(canvasRef);
+
   const rows: [string, string, boolean?][] = [
     ["Qatnov", record.tripId, true],
     ["Yo‘nalish", record.route],
@@ -17,25 +38,32 @@ export const Confirmation = forwardRef<HTMLHeadingElement, Props>(function Confi
     ["Ism", record.name],
     ["Yuk tavsifi", record.cargo],
   ];
+
   return (
-    <div className="flex flex-col gap-5 p-5 sm:p-6" role="status" aria-live="polite">
+    <div className="relative flex flex-col gap-5 p-5 sm:p-7" role="status" aria-live="polite">
+      <canvas ref={canvasRef} aria-hidden className="pointer-events-none absolute inset-0 z-20 size-full" />
+
       <div className="flex flex-col items-center gap-3 pt-2 text-center">
-        <span className="grid size-16 place-items-center rounded-full bg-brand-soft text-brand-ink">
-          <CheckCircle2 className="size-9" aria-hidden />
-        </span>
-        <h2 ref={headingRef} tabIndex={-1} id="dialog-title" className="text-2xl font-extrabold outline-none">
+        <svg viewBox="0 0 64 64" className="size-16" aria-hidden>
+          <circle cx="32" cy="32" r="30" fill="var(--brand-soft)" />
+          <circle cx="32" cy="32" r="28" fill="none" stroke="var(--brand)" strokeWidth="3" pathLength={1} strokeDasharray="1" strokeDashoffset="1" className="tb-draw" style={{ transform: "rotate(-90deg)", transformOrigin: "center" }} />
+          <path d="M20 33 l8 8 l16 -18" fill="none" stroke="var(--brand)" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" pathLength={1} strokeDasharray="1" strokeDashoffset="1" className="tb-draw" style={{ animationDelay: "0.45s", animationDuration: "0.5s" }} />
+        </svg>
+        <h2 ref={headingRef} tabIndex={-1} id="dialog-title" className="text-2xl font-extrabold tracking-[-0.02em] outline-none">
           So‘rovingiz qabul qilindi
         </h2>
       </div>
 
       {/* Chipta */}
-      <div className="relative overflow-hidden rounded-[16px] border border-line bg-bg">
-        <div className="flex items-center justify-between gap-3 border-b border-dashed border-line px-5 py-4">
+      <div className="tb-ticket-up relative rounded-[22px] border border-line bg-bg shadow-card">
+        <div className="flex items-center justify-between gap-3 px-5 py-4">
           <span className="text-sm text-muted">So‘rov raqami</span>
           <span className="font-mono text-lg font-bold tabular-nums tracking-wider text-brand-ink">{record.code}</span>
         </div>
-        <span className="absolute -left-2.5 top-[52px] size-5 rounded-full border border-line bg-card" aria-hidden />
-        <span className="absolute -right-2.5 top-[52px] size-5 rounded-full border border-line bg-card" aria-hidden />
+        <div className="relative h-0 border-t-2 border-dashed border-line" aria-hidden>
+          <span className="absolute -left-3 -top-3 size-6 rounded-full border border-line bg-card [clip-path:inset(0_0_0_50%)]" />
+          <span className="absolute -right-3 -top-3 size-6 rounded-full border border-line bg-card [clip-path:inset(0_50%_0_0)]" />
+        </div>
         <dl className="divide-y divide-line px-5">
           {rows.map(([label, value, nums]) => (
             <div key={label} className="flex flex-col gap-0.5 py-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
@@ -46,16 +74,17 @@ export const Confirmation = forwardRef<HTMLHeadingElement, Props>(function Confi
         </dl>
       </div>
 
-      <p className="flex items-start gap-2 rounded-xl bg-brand-soft px-4 py-3 text-sm text-ink">
+      <p className="flex items-start gap-2 rounded-2xl bg-brand-soft px-4 py-3 text-sm text-ink">
         <Info className="mt-0.5 size-4 shrink-0 text-brand-ink" aria-hidden />
         Bu sinov so‘rovi, haqiqiy band qilinmadi.
       </p>
+
 
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <button
           type="button"
           onClick={onAgain}
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-line bg-card px-5 text-sm font-semibold transition-colors hover:bg-brand-soft"
+          className="press inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-line bg-card px-5 text-sm font-semibold hover:bg-brand-soft"
         >
           <RotateCcw className="size-4" aria-hidden />
           Yana so‘rov yuborish
@@ -63,7 +92,7 @@ export const Confirmation = forwardRef<HTMLHeadingElement, Props>(function Confi
         <button
           type="button"
           onClick={onBackToList}
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-brand px-5 text-sm font-bold text-on-brand transition-colors hover:bg-brand-hover"
+          className="press inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-brand px-5 text-sm font-bold text-on-brand hover:bg-brand-hover"
         >
           <List className="size-4" aria-hidden />
           Ro‘yxatga qaytish

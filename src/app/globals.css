@@ -15,6 +15,9 @@
   --line: #e6e8ec;
   --danger: #e5484d;
   --danger-ink: #c62a2f;
+  --route-a: #12b76a;
+  --route-b: #0ba5a4;
+  --hero-fallback: radial-gradient(70% 80% at 85% 20%, rgb(11 165 164 / 0.18), transparent 60%), radial-gradient(60% 70% at 70% 90%, rgb(18 183 106 / 0.2), transparent 60%), linear-gradient(180deg, #f3faf6, #f7f8fa);
   --shadow: 0 1px 2px rgb(11 18 32 / 0.04), 0 8px 24px -12px rgb(11 18 32 / 0.12);
   --shadow-lg: 0 2px 6px rgb(11 18 32 / 0.06), 0 24px 48px -16px rgb(11 18 32 / 0.22);
   color-scheme: light;
@@ -33,6 +36,9 @@
   --line: #22304a;
   --danger: #f2555a;
   --danger-ink: #ff8589;
+  --route-a: #4ade94;
+  --route-b: #5eead4;
+  --hero-fallback: radial-gradient(120% 90% at 85% 10%, rgb(11 165 164 / .45), transparent 55%), radial-gradient(90% 80% at 10% 100%, rgb(18 183 106 / .45), transparent 60%), linear-gradient(160deg, #0b1220, #0f2a2a 55%, #0b1220);
   --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px -12px rgb(0 0 0 / 0.5);
   --shadow-lg: 0 2px 6px rgb(0 0 0 / 0.35), 0 24px 48px -16px rgb(0 0 0 / 0.7);
   color-scheme: dark;
@@ -106,7 +112,11 @@ body::after {
   background-clip: text;
   color: transparent;
 }
-.dark .text-gradient-on-dark,
+.dark .text-gradient {
+  background: linear-gradient(90deg, #4ade94, #5eead4);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
 .text-gradient-on-dark {
   background: linear-gradient(90deg, #4ade94, #5eead4);
   -webkit-background-clip: text;
@@ -114,6 +124,15 @@ body::after {
   color: transparent;
 }
 
+/* Mavzuga moslashuvchi glass (hero) */
+.glass-surface {
+  background: color-mix(in srgb, var(--card) 72%, transparent);
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+}
+
+/* Foto ustidagi glass (har doim to‘q fon) */
 .glass {
   background: rgb(255 255 255 / 0.1);
   border: 1px solid rgb(255 255 255 / 0.18);
@@ -227,7 +246,7 @@ dialog.tb-dialog::backdrop {
 .tb-dot-pulse { animation: tb-dot-pulse 2.4s ease-in-out infinite; }
 .tb-draw { animation: tb-draw 1.1s cubic-bezier(0.22, 1, 0.36, 1) both; }
 .tb-fade-in { animation: tb-fade-in 0.6s ease-out both; }
-.tb-truck { offset-rotate: 0deg; animation: tb-drive 7s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate both; }
+.tb-truck { offset-rotate: 0deg; animation: tb-drive 7s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate both; animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1); animation-iteration-count: infinite; animation-direction: alternate; animation-fill-mode: both; }
 .tb-shake { animation: tb-shake 300ms ease-in-out; }
 .tb-ticket-up { animation: tb-ticket-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both; }
 .tb-wave-bar { transform-origin: center; animation: tb-wave 1.2s ease-in-out infinite; }
@@ -268,3 +287,45 @@ dialog.tb-dialog[open] > .tb-dialog-panel { animation: tb-pop 0.42s cubic-bezier
   }
   .tb-truck { display: none; }
 }
+
+/* ---------- Yo‘ldosh maskoti ---------- */
+@keyframes yb-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes yb-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+@keyframes yb-wave { 0%, 60%, 100% { transform: rotate(0deg); } 15% { transform: rotate(-22deg); } 30% { transform: rotate(8deg); } 45% { transform: rotate(-16deg); } }
+@keyframes yb-antenna { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@keyframes yb-ring { from { transform: scale(0.85); opacity: 0.7; } to { transform: scale(1.35); opacity: 0; } }
+@keyframes yb-look { 0%, 100% { transform: translate(0, 0); } 30% { transform: translate(-3px, -3px); } 65% { transform: translate(3px, -3px); } }
+@keyframes yb-talk { 0%, 100% { transform: scaleY(0.4); } 50% { transform: scaleY(1); } }
+@keyframes yb-spin { to { transform: rotate(360deg); } }
+
+.yoldosh-bot .yb-float { animation: yb-float 3.2s ease-in-out infinite; }
+.yoldosh-bot .yb-eye { transform-box: fill-box; transform-origin: center; animation: yb-blink 4.5s infinite; }
+.yoldosh-bot[data-wave="true"] .yb-arm-wave { animation: yb-wave 3.6s ease-in-out infinite; }
+.yoldosh-bot .yb-antenna { animation: yb-antenna 2s ease-in-out infinite; }
+.yoldosh-bot .yb-rings, .yoldosh-bot .yb-talk { opacity: 0; }
+.yoldosh-bot .yb-rings circle { transform-box: fill-box; transform-origin: center; }
+.yoldosh-bot[data-state="listening"] .yb-rings { opacity: 1; }
+.yoldosh-bot[data-state="listening"] .yb-rings circle { animation: yb-ring 1.6s ease-out infinite; }
+.yoldosh-bot[data-state="listening"] .yb-rings circle:nth-child(2) { animation-delay: 0.8s; }
+.yoldosh-bot[data-state="listening"] .yb-eye { transform: scale(1.15); }
+.yoldosh-bot[data-state="thinking"] .yb-eyes { animation: yb-look 1.6s ease-in-out infinite; }
+.yoldosh-bot[data-state="thinking"] .yb-wheel { animation: yb-spin 1.2s linear infinite; }
+.yoldosh-bot[data-state="speaking"] .yb-mouth { opacity: 0; }
+.yoldosh-bot[data-state="speaking"] .yb-talk { opacity: 1; }
+.yoldosh-bot[data-state="speaking"] .yb-talk rect { transform-box: fill-box; transform-origin: center; animation: yb-talk 0.5s ease-in-out infinite; }
+.yoldosh-bot[data-state="speaking"] .yb-talk rect:nth-child(2) { animation-delay: 0.12s; }
+.yoldosh-bot[data-state="speaking"] .yb-talk rect:nth-child(3) { animation-delay: 0.24s; }
+.yoldosh-bot[data-state="speaking"] .yb-talk rect:nth-child(4) { animation-delay: 0.36s; }
+
+/* ---------- Yo‘nalishlar sxemasi ---------- */
+@keyframes rs-drive {
+  0% { offset-distance: 10%; }
+  100% { offset-distance: 90%; }
+}
+@keyframes rs-flow { to { stroke-dashoffset: -32; } }
+@keyframes rs-hub {
+  0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.8; }
+  100% { transform: translate(-50%, -50%) scale(1.7); opacity: 0; }
+}
+.rs-flow { animation: rs-flow 1.6s linear infinite; }
+.rs-hub-ring { animation: rs-hub 2.4s ease-out infinite; }
