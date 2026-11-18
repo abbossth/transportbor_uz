@@ -428,9 +428,9 @@ export default function Assistant() {
                     type="button"
                     aria-pressed={on}
                     onClick={() => switchMode(m)}
-                    className={`press inline-flex min-h-10 items-center gap-2 rounded-full px-3.5 text-sm font-bold sm:px-5 ${on ? "bg-white text-[#0a3123] shadow-card" : "text-white/85 hover:text-white"}`}
+                    className={`press inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[13px] font-bold sm:gap-2 sm:px-5 sm:text-sm ${on ? "bg-white text-[#0a3123] shadow-card" : "text-white/85 hover:text-white"}`}
                   >
-                    <M.Icon className="size-4" aria-hidden />
+                    <M.Icon className="hidden size-4 min-[400px]:block" aria-hidden />
                     {M.tab}
                   </button>
                 );

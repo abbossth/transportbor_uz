@@ -31,14 +31,14 @@ export function NewRequestForm({ trips, name }: { trips: Trip[]; name: string })
           } else setMsg({ ok: false, text: json.message ?? "Xatolik" });
         });
       }}
-      className="flex flex-col gap-3 rounded-[22px] border border-line bg-card p-5 shadow-card"
+      className="flex min-w-0 flex-col gap-3 rounded-[22px] border border-line bg-card p-5 shadow-card"
     >
       <h3 className="flex items-center gap-2 text-lg font-extrabold">
         <Plus className="size-5 text-brand-ink" aria-hidden /> Yangi so‘rov
       </h3>
-      <label className="flex flex-col gap-1.5 text-sm font-semibold">
+      <label className="flex min-w-0 flex-col gap-1.5 text-sm font-semibold">
         Qatnov
-        <select value={tripId} onChange={(e) => setTripId(e.target.value)} className="min-h-12 rounded-2xl border border-line bg-bg px-3 text-ink focus:border-brand focus:outline-none">
+        <select value={tripId} onChange={(e) => setTripId(e.target.value)} className="min-h-12 w-full min-w-0 truncate rounded-2xl border border-line bg-bg px-3 text-ink focus:border-brand focus:outline-none">
           {trips.map((t) => (
             <option key={t.id} value={t.id}>
               {t.id} · {routeLabel(t)} · {whenLabel(t)}
@@ -46,9 +46,9 @@ export function NewRequestForm({ trips, name }: { trips: Trip[]; name: string })
           ))}
         </select>
       </label>
-      <label className="flex flex-col gap-1.5 text-sm font-semibold">
+      <label className="flex min-w-0 flex-col gap-1.5 text-sm font-semibold">
         Yuk tavsifi
-        <input value={cargo} maxLength={CARGO_MAX} onChange={(e) => setCargo(e.target.value)} placeholder="Masalan: 2 quti kitob" className="min-h-12 rounded-2xl border border-line bg-bg px-4 text-ink focus:border-brand focus:outline-none" />
+        <input value={cargo} maxLength={CARGO_MAX} onChange={(e) => setCargo(e.target.value)} placeholder="Masalan: 2 quti kitob" className="min-h-12 w-full min-w-0 rounded-2xl border border-line bg-bg px-4 text-ink focus:border-brand focus:outline-none" />
       </label>
       {msg && (
         <p role={msg.ok ? "status" : "alert"} className={`text-sm font-semibold ${msg.ok ? "text-brand-ink" : "text-danger-ink"}`}>

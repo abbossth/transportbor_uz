@@ -29,7 +29,7 @@ function Stat({ icon, value, label, accent }: { icon: ReactNode; value: ReactNod
 
 function Panel({ title, children, className = "" }: { title: string; children: ReactNode; className?: string }) {
   return (
-    <section className={`rounded-[22px] border border-line bg-card p-5 shadow-card ${className}`}>
+    <section className={`min-w-0 rounded-[22px] border border-line bg-card p-5 shadow-card ${className}`}>
       <h2 className="mb-4 text-base font-extrabold">{title}</h2>
       {children}
     </section>

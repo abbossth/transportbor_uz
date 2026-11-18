@@ -16,7 +16,7 @@ export function Hero() {
       </div>
       <div
         aria-hidden
-        className="absolute inset-0 -z-10 [background:linear-gradient(90deg,var(--bg)_0%,color-mix(in_srgb,var(--bg)_82%,transparent)_45%,color-mix(in_srgb,var(--bg)_25%,transparent)_100%)]"
+        className="absolute inset-0 -z-10 [background:linear-gradient(180deg,color-mix(in_srgb,var(--bg)_70%,transparent)_0%,color-mix(in_srgb,var(--bg)_88%,transparent)_100%)] lg:[background:linear-gradient(90deg,var(--bg)_0%,color-mix(in_srgb,var(--bg)_82%,transparent)_45%,color-mix(in_srgb,var(--bg)_25%,transparent)_100%)]"
       />
       <div aria-hidden className="absolute inset-x-0 bottom-0 -z-10 h-40 bg-gradient-to-t from-bg to-transparent" />
 
